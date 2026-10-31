@@ -355,6 +355,7 @@ const CHECK_BACK = (() => {
     return u.origin === location.origin ? u.pathname + u.search : null;
   }catch(e){ return null; }
 })();
+const EMBED = new URLSearchParams(location.search).get("embed") === "1" && window.parent !== window;
 
 /* =========================================================
    設定・状態（iOS のメモリ対策で window に載せる）
@@ -468,7 +469,11 @@ function openPrep(eye){
 }
 $('goPrepR').addEventListener('click', () => { window.session = { date: Date.now(), method:'wall30', R:null, L:null }; if(!localStorage.getItem(LS.demo)) openDemo(() => openPrep('R')); else openPrep('R'); });
 $('skipEye').addEventListener('click', () => finishSession());
-if(CHECK_BACK){
+if(EMBED){
+  $('checkBack').style.display = 'block';
+  $('checkBack').textContent = 'やめてカメラでチェックに戻る';
+  $('checkBack').addEventListener('click', () => window.parent.postMessage({type:'moten-cancel'}, location.origin));
+}else if(CHECK_BACK){
   $('checkBack').style.display = 'block';
   $('checkBack').addEventListener('click', () => location.replace(CHECK_BACK));
 }
@@ -605,6 +610,7 @@ $('mQuit').addEventListener('click', () => {
   closeMeas();
   window.run = null;
   toast('測定をやめました');
+  if(EMBED){ window.parent.postMessage({type:'moten-cancel'}, location.origin); return; }
   show('s-home'); renderHistory();
 });
 
@@ -636,6 +642,10 @@ function endEye(){
 function finishSession(){
   const s = window.session;
   if(!s || (!s.R && !s.L)){
+    if(EMBED){
+      window.parent.postMessage({type:'moten-cancel'}, location.origin);
+      return;
+    }
     if(CHECK_BACK) location.replace(CHECK_BACK);
     else show('s-home');
     return;
@@ -643,19 +653,39 @@ function finishSession(){
   const hist = loadHist();
   hist.unshift(s);
   localStorage.setItem(LS.hist, JSON.stringify(hist.slice(0, 30)));
-  if(CHECK_BACK){
-    const sum = e => {
-      if(!e) return null;
-      const st = stats(e);
-      return { A:Math.round(st.A), w:Math.round(st.w), h:Math.round(st.h),
-        up:Math.round(st.upShare*100)/100, edge:st.edge, W:e.W, H:e.H,
-        pts:st.poly.map(p => [Math.round(p.x), Math.round(p.y), p.edge ? 1 : 0]) };
-    };
+  if(CHECK_BACK && !EMBED){
     localStorage.setItem('chk_bs', JSON.stringify({ at:s.date, method:s.method, R:sum(s.R), L:sum(s.L) }));
     location.replace(CHECK_BACK + '#bs=' + s.date);
     return;
   }
   renderResult(s, hist[1] || null);
+  if(EMBED){
+    const result = $('s-result');
+    result.querySelectorAll('button').forEach(button => {
+      if(button.id !== 'embedDone') button.style.display = 'none';
+    });
+    let done = $('embedDone');
+    if(!done){
+      done = document.createElement('button');
+      done.id = 'embedDone';
+      done.className = 'btn';
+      done.textContent = 'カメラでチェックに戻る（記録する）';
+      result.querySelector('.cta').appendChild(done);
+    }
+    const reading = document.createElement('div');
+    reading.innerHTML = readingHTML(stats(s.R), stats(s.L), null, null);
+    const data = { at:s.date, method:s.method, R:sum(s.R), L:sum(s.L),
+      reading:Array.from(reading.querySelectorAll('p'), p => p.textContent) };
+    done.onclick = () => window.parent.postMessage({type:'moten-result', data}, location.origin);
+  }
+}
+
+function sum(e){
+  if(!e) return null;
+  const st = stats(e);
+  return { A:Math.round(st.A), w:Math.round(st.w), h:Math.round(st.h),
+    up:Math.round(st.upShare*100)/100, edge:st.edge, W:e.W, H:e.H,
+    pts:st.poly.map(p => [Math.round(p.x), Math.round(p.y), p.edge ? 1 : 0]) };
 }
 
 /* =========================================================
@@ -1015,7 +1045,7 @@ document.addEventListener('keydown',e=>{
 /* =========================================================
    Service Worker 登録 ＋ controllerchange で自動リロード
    ========================================================= */
-if(!CHECK_BACK && 'serviceWorker' in navigator){
+if(!CHECK_BACK && !EMBED && 'serviceWorker' in navigator){
   let refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if(refreshing) return; refreshing = true;
@@ -1026,7 +1056,7 @@ if(!CHECK_BACK && 'serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(err => console.warn('[SW] register failed', err));
   });
 }
-if(CHECK_BACK){
+if(CHECK_BACK || EMBED){
   $('splash').classList.add('hide');
   $('s-home').classList.remove('active');
   $('goPrepR').click();
