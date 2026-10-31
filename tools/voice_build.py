@@ -23,7 +23,7 @@ def vkey(text):
 
 def say_text(text):
     # 1語だと読み違えやすいものは、かなで読ませる（外＝そと・鼻側＝はながわ・覆う＝おおう）
-    text = re.sub(r'外(?=[へのにが])', 'そと', text).replace('鼻側', 'はながわ').replace('覆', 'おお')
+    text = re.sub(r'外(?=[へのにが])', 'そと', text).replace('鼻側', 'はながわ').replace('覆', 'おお').replace('縦向き', 'たてむき').replace('上へ', '上に')   # 「上へ」は「へ」が落ちる・かなだと「へ」と読む（2026-10-31 文字起こし2種で確認）
     return text.replace('止め', 'とめ').replace('cm', 'センチ').replace('8点', 'はちてん')
 
 
