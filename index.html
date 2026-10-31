@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-<meta name="theme-color" content="#0b1a20" />
+<meta name="theme-color" content="#050505" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="盲点マップ" />
-<meta name="description" content="スマホ1台で、右目と左目の盲点の大きさと形を8方向から測り、左右を比べるスクリーニング。Functional Neuro TrainingのLite PWA。" />
+<meta name="description" content="スマホ1台で、右目と左目の盲点の大きさと形を8か所で測り、左右を比べるスクリーニング。Functional Neuro TrainingのLite PWA。" />
 <title>盲点マップ ─ 盲点の大きさと形を左右で比べる / Functional Neuro Training</title>
 
 <link rel="manifest" href="manifest.json" />
@@ -17,23 +17,25 @@
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Shippori+Mincho:wght@500;700&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet" />
 
 <style>
-  /* ===== 配色：ユニバーサルデザイン（FNT共通） ===== */
+  /* ===== FNTアドバンス共通の黒×金 ===== */
   :root{
-    --bg0:#0b1a20; --bg1:#123138; --bg2:#16414a;
-    --accent:#7fe0cd; --accent2:#3fa895; --accentInk:#06231d;
-    --ink:#f2faf7; --muted:#a8c6bf; --line:rgba(255,255,255,.12);
-    --card:rgba(255,255,255,.07); --danger:#ffb4a8;
-    --eyeR:#ffa94d; --eyeL:#4ea8ff;   /* 右目＝オレンジ／左目＝青（色覚の差に強い組み合わせ） */
+    --bg0:#050505; --bg1:#0e0e0f; --bg2:#1a1916;
+    --accent:#d8bd84; --accent2:#a8874f; --accentInk:#141008;
+    --ink:#f4f1ea; --muted:#9d978b; --line:rgba(216,189,132,.18);
+    --card:rgba(255,255,255,.035); --danger:#ffb4a8;
+    --eyeR:#e0a458; --eyeL:#7fa8d8;
+    --serif:"Shippori Mincho","Hiragino Mincho ProN",serif;
+    --latin:"Cormorant Garamond","Times New Roman",serif;
   }
   *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
   html,body{ overflow-x:hidden; max-width:100%; }
   body{
-    font-family:"M PLUS Rounded 1c", system-ui, sans-serif; font-weight:700;
+    font-family:"Noto Sans JP", system-ui, sans-serif; font-weight:500; letter-spacing:.02em;
     color:var(--ink); line-height:1.7;
-    background:radial-gradient(120% 90% at 50% 6%, var(--bg2) 0%, var(--bg1) 44%, var(--bg0) 100%);
+    background:radial-gradient(110% 70% at 50% -10%, var(--bg2) 0%, var(--bg1) 45%, var(--bg0) 100%);
     background-attachment:fixed; min-height:100vh; min-height:100dvh;
     padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
@@ -55,7 +57,7 @@
   #splash .tapstart{ min-height:52px; padding:14px 34px; border-radius:16px; font-size:17px; font-weight:800;
     color:var(--accentInk); background:linear-gradient(180deg,var(--accent),var(--accent2)); animation:breathe 2.4s ease-in-out infinite; }
   #splash .copy{ position:absolute; bottom:calc(20px + env(safe-area-inset-bottom)); font-size:11px; color:var(--muted); }
-  @keyframes breathe{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.05); } }
+  @keyframes breathe{ 0%,100%{ box-shadow:0 0 0 0 rgba(216,189,132,0); } 50%{ box-shadow:0 0 28px 2px rgba(216,189,132,.28); } }
 
   /* ===== レイアウト ===== */
   .app{ width:100%; max-width:480px; margin:0 auto; min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; }
@@ -151,6 +153,46 @@
   .toast{ position:fixed; left:50%; bottom:calc(150px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:300;
     background:rgba(0,0,0,.82); color:#fff; padding:10px 18px; border-radius:12px; font-size:14px; opacity:0; transition:.25s; pointer-events:none; }
   .toast.show{ opacity:1; }
+
+#splash{ position:fixed; inset:0; z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px;
+  background:radial-gradient(90% 60% at 50% 38%, #1c1a15 0%, #0b0b0b 55%, #030303 100%); transition:opacity .45s ease, visibility .45s ease; }
+#splash img{ width:96px; height:96px; margin-bottom:30px; border-radius:22px; box-shadow:0 0 0 1px var(--line),0 20px 60px rgba(0,0,0,.6); }
+#splash .fnt{ font-family:var(--latin); font-size:13px; letter-spacing:.42em; color:var(--accent); margin-bottom:18px; }
+#splash h1{ font-family:var(--serif); font-size:34px; font-weight:700; color:var(--ink); letter-spacing:.12em; margin-bottom:6px; }
+#splash h1 span{ display:block; font-family:var(--latin); font-size:58px; font-weight:500; letter-spacing:.18em; color:var(--accent); line-height:1.1; margin-bottom:6px; }
+#splash .rule{ width:56px; height:1px; background:linear-gradient(90deg,transparent,var(--accent),transparent); margin:14px auto 16px; }
+#splash .lead{ font-family:var(--serif); font-size:15px; color:var(--muted); letter-spacing:.14em; line-height:2; margin-bottom:38px; }
+#splash .tapstart{ min-height:52px; padding:14px 46px; border-radius:999px; font-size:15px; font-weight:500; letter-spacing:.24em; color:var(--accent); background:transparent; border:1px solid var(--accent); animation:breathe 2.8s ease-in-out infinite; }
+.logo b{ font-family:var(--latin); font-size:20px; font-weight:600; letter-spacing:.28em; color:var(--accent); }
+.logo b small{ font-family:var(--serif); font-size:12px; letter-spacing:.16em; color:var(--muted); margin-left:8px; }
+.menuBtn{ width:46px; height:46px; border-radius:50%; background:transparent; border:1px solid var(--line); color:var(--accent); font-size:18px; display:flex; align-items:center; justify-content:center; }
+.btn{ width:100%; min-height:54px; padding:14px; border-radius:999px; font-size:15px; font-weight:700; letter-spacing:.2em; color:var(--accentInk); background:linear-gradient(135deg,#ead3a0 0%,#cfb077 45%,#a8874f 100%); box-shadow:0 8px 24px rgba(168,135,79,.18); margin:6px 0; }
+.card{ position:relative; margin:18px 0 4px; padding:20px 18px 16px; border-radius:18px; background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015)); border:1px solid var(--line); }
+.card::before{ content:''; position:absolute; left:18px; right:18px; top:0; height:1px; background:linear-gradient(90deg,transparent,var(--accent),transparent); opacity:.7; }
+  #splash h1 span{font-size:clamp(32px,9vw,58px);letter-spacing:.12em}
+  h2,h3,.side .top b{font-family:var(--serif);font-weight:700;letter-spacing:.08em}
+  .step-label,.fnt-copy{font-family:var(--latin);letter-spacing:.3em}
+  .btn.sub{background:transparent;color:var(--accent);border:1px solid var(--line);box-shadow:none}
+  .side{border-left:1px solid var(--line)}
+  #meas{background:#f4f1ea}
+  #mStatus{color:#92908b} #mUndo,#mQuit{background:transparent;color:#77746e}
+  #hold{background:#141414;color:var(--accent);border:1px solid var(--accent2)}
+  #hold.pressing{background:linear-gradient(135deg,#ead3a0 0%,#cfb077 45%,#a8874f 100%);color:#141008}
+  .mapBox{background:#0e0e0f;border:1px solid var(--line)} .mapBox .cap{color:var(--muted)}
+  .demoLink{background:transparent;color:var(--accent);padding:10px;font-size:13px}
+  body.demoing{overflow:hidden}
+  #demo{position:fixed;inset:0;z-index:1100;background:var(--bg0);padding:calc(14px + env(safe-area-inset-top)) 16px calc(14px + env(safe-area-inset-bottom));display:none;flex-direction:column;align-items:center;overflow:auto}
+  #demo.on{display:flex}
+  .demoHead{width:100%;max-width:620px;display:flex;justify-content:space-between;align-items:center;color:var(--accent)}
+  #demoClose{background:transparent;color:var(--ink);padding:12px;font-size:14px}
+  #demoArt{width:100%;max-width:620px;flex:1;min-height:180px;max-height:60vh}
+  #demoCaption{max-width:620px;min-height:5em;text-align:center;font-size:clamp(14px,3.8vw,18px);padding:16px 0;color:var(--ink)}
+  .demoControls{display:flex;gap:8px;width:100%;max-width:620px;margin-top:auto}
+  .demoControls button{flex:1;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--accent);padding:12px 4px;font-size:13px}
+  .demoControls button:disabled{opacity:.35}
+  #demoDots{display:flex;gap:10px;justify-content:center;padding:18px 0}
+  #demoDots button{width:9px;height:9px;padding:0;border-radius:50%;background:#484238}
+  #demoDots button.on{background:var(--accent)}
 </style>
 </head>
 <body>
@@ -158,15 +200,16 @@
 <div id="splash" role="dialog" aria-label="盲点マップを開始">
   <img src="FNT512.png" alt="FNT" />
   <div class="fnt">FUNCTIONAL NEURO TRAINING</div>
-  <h1>盲点マップ</h1>
-  <p class="lead">右目と左目の盲点を8方向から測って、<br />大きさと形を左右で比べる</p>
+  <h1><span>BLIND SPOT</span>盲点マップ</h1>
+  <div class="rule"></div>
+  <p class="lead">右目と左目の盲点を8か所で測って、<br />大きさと形を左右で比べる</p>
   <button class="tapstart" id="tapstart">タップしてはじめる</button>
   <div class="copy">© Functional Neuro Training / Legrandchariot</div>
 </div>
 
 <div class="app">
   <header>
-    <div class="logo"><img src="FNT512-transparent.png" alt="" /><b>盲点マップ</b></div>
+    <div class="logo"><img src="FNT512-transparent.png" alt="" /><b>BLIND SPOT<small>盲点マップ</small></b></div>
     <button class="menuBtn" id="menuBtn" aria-label="メニューを開く">☰</button>
   </header>
 
@@ -182,6 +225,7 @@
         <div class="hist" id="hist"></div>
       </div>
       <div class="cta">
+        <button class="btn sub" id="homeDemo">▶ 測り方のデモを見る（約1分）</button>
         <button class="btn" id="goPrepR">右目から測る</button>
       </div>
     </section>
@@ -190,6 +234,7 @@
     <section class="screen" id="s-prep">
       <div class="step-label" id="prepLabel">RIGHT EYE</div>
       <h2 id="prepTitle">右目の盲点を測る</h2>
+      <button class="demoLink" id="prepDemo">▶ デモを見る</button>
       <ul class="setupList" id="prepList"></ul>
       <p class="note">⚠ 一点を見続けられないと、きれいな形になりません。そのときは結果を過信せず、「見続ける力（注視）」のドリルを先にやりましょう。</p>
       <div class="cta">
@@ -206,7 +251,7 @@
       <div class="mapBox overlayBox" id="overlayBox"></div>
       <div class="card" style="margin-top:12px;">
         <table class="num" id="numTable"></table>
-        <p class="note">数字は画面上の大きさ（点の数＝px）。左右で<b>同じ距離</b>で測ったときだけ比べられます。</p>
+        <p class="note">数字は画面上の大きさ（点の数＝px）。<b>目と壁の距離を左右同じに（約30cm）</b>して測ったときだけ比べられます。</p>
       </div>
       <h3>読み方（BDC「皮質の左右差のアセスメント」より）</h3>
       <div class="card read" id="reading"></div>
@@ -264,13 +309,15 @@
   <h4>測り方</h4>
   <div class="guide">
     <ol>
-      <li>測らない方の目を手で覆う</li>
-      <li>まっすぐ前の遠くの一点を見続ける（スマホは見ない）</li>
-      <li>スマホを腕を伸ばした距離で持ち、測る目の側へずらす。点が消えたらボタンを押し続ける</li>
-      <li>点がゆっくり外へ動く。見えた瞬間に指を離す</li>
-      <li>点が盲点の真ん中に戻る。声に合わせて上・下・斜め…と8か所くり返す</li>
+      <li>目と壁の距離を約30cmにし、目の高さに目印を1つ作る</li>
+      <li>測らない目を覆い、壁の目印だけを見続ける</li>
+      <li>縦向きのスマホを目印のすぐ右（左目は左）で、目の高さに壁へ当てる</li>
+      <li>壁に沿って右（左目は左）へずらし、点が消えたら止める。ここが1点目（鼻側）。以後スマホを動かさない</li>
+      <li>下のボタンを押し続け、外へ動く点が見えたら離す＝2点目</li>
+      <li>点が中間に戻ったら、上・下・外の斜め上・外の斜め下・鼻側の斜め上・鼻側の斜め下。合計8点</li>
     </ol>
-    <p style="margin-top:8px;">左右で<b>同じ距離</b>にする。距離が変わると盲点の大きさが変わります。画面の端まで点が来てしまうときは、スマホを少し近づけて両目とも測り直す。</p>
+    <p style="margin-top:8px;">目と壁の距離を左右同じに（約30cm）。端で止まったら、目と壁の距離を少し縮めて（25cmくらい）、両目とも同じ距離で測り直す。</p>
+    <button class="demoLink" id="menuDemo">▶ 測り方のデモを見る</button>
   </div>
 
   <h4>記録</h4>
@@ -285,6 +332,13 @@
   </div>
 </nav>
 
+<div id="demo" role="dialog" aria-modal="true" aria-label="測り方のデモ" aria-hidden="true">
+  <div class="demoHead"><span class="step-label">HOW TO MEASURE</span><button id="demoClose">閉じる ×（スキップ）</button></div>
+  <svg id="demoArt" viewBox="0 0 480 440" role="img" aria-label="壁とスマホを使う測定手順のアニメーション"></svg>
+  <p id="demoCaption" aria-live="off"></p>
+  <div class="demoControls"><button id="demoPrev">◀ 前</button><button id="demoPause">❚❚ 一時停止</button><button id="demoNext">次 ▶</button></div>
+  <div id="demoDots" aria-label="場面の進み具合"></div>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -294,14 +348,14 @@ const $ = (id) => document.getElementById(id);
 /* =========================================================
    設定・状態（iOS のメモリ対策で window に載せる）
    ========================================================= */
-const LS = { hist:'moten-map-history', speed:'moten-map-speed', voice:'moten-map-voice' };
+const LS = { hist:'moten-map-history', speed:'moten-map-speed', voice:'moten-map-voice', demo:'moten-map-demo-seen' };
 window.settings = {
   speed: Number(localStorage.getItem(LS.speed) || 10),   // px/秒（かなりゆっくりめ）
   voice: localStorage.getItem(LS.voice) !== '0'
 };
 
-/* 8方向。ox は「外（耳側）」が＋、oy は下が＋。右目なら外＝右、左目なら外＝左に反転して使う。
-   1つ目（外）だけ画面の開始点から動かし、残り7つは盲点の真ん中（開始点と1つ目の中間）から動かす。 */
+/* 7方向＋開始点（鼻側）。ox は「外（耳側）」が＋、oy は下が＋。右目なら外＝右、左目なら外＝左に反転して使う。
+   1つ目（外）だけ画面の開始点から動かし、残り6つは盲点の真ん中（鼻側と外の中間）から動かす。 */
 const R2 = Math.SQRT1_2;
 const DIRS = [
   { key:'out',     ox: 1,   oy: 0,   name:'外',   say:'外へ' },
@@ -309,9 +363,8 @@ const DIRS = [
   { key:'down',    ox: 0,   oy: 1,   name:'下',   say:'下へ' },
   { key:'outUp',   ox: R2,  oy:-R2,  name:'外の斜め上', say:'外の、ななめ上へ' },
   { key:'outDown', ox: R2,  oy: R2,  name:'外の斜め下', say:'外の、ななめ下へ' },
-  { key:'inUp',    ox:-R2,  oy:-R2,  name:'内の斜め上', say:'鼻側の、ななめ上へ' },
-  { key:'inDown',  ox:-R2,  oy: R2,  name:'内の斜め下', say:'鼻側の、ななめ下へ' },
-  { key:'in',      ox:-1,   oy: 0,   name:'内',   say:'鼻側へ' }
+  { key:'inUp',    ox:-R2,  oy:-R2,  name:'鼻側の斜め上', say:'鼻側の、ななめ上へ' },
+  { key:'inDown',  ox:-R2,  oy: R2,  name:'鼻側の斜め下', say:'鼻側の、ななめ下へ' },
 ];
 const EYE = { R:{ label:'右目', en:'RIGHT EYE', cover:'左目', side:'右', cortex:'左', outSign: 1 },
               L:{ label:'左目', en:'LEFT EYE',  cover:'右目', side:'左', cortex:'右', outSign:-1 } };
@@ -390,17 +443,19 @@ function openPrep(eye){
   $('prepLabel').textContent = e.en;
   $('prepTitle').textContent = e.label + 'の盲点を測る';
   const items = [
-    `<b>${e.cover}を手で覆う。</b>${e.label}だけで見ます`,
-    `<b>まっすぐ前の遠くの一点</b>（壁の印など）を見続ける。測っている間、スマホの画面は見ません`,
-    `スマホを<b>腕を伸ばした距離</b>で、目の高さに持つ。${eye === 'L' ? '<b>右目と同じ距離</b>にします' : 'この距離を覚えておき、左目も同じにします'}`,
-    `画面の点を目の端で感じながら、スマホを<b>${e.side}へ</b>ゆっくりずらす。<b>点が消えたら止めて、下のボタンを押し続ける</b>`,
-    `点がゆっくり${e.side}へ動く。<b>見えた瞬間に指を離す。</b>点が盲点の真ん中に戻るので、声の合図で上・下・斜め…と<b>8か所</b>くり返します`
+    `目と壁を<b>約30cm</b>離し、目の高さに目印を1つ作る。左右とも同じ距離に`,
+    `<b>${e.cover}を手で覆い、壁の目印だけ</b>を見続ける`,
+    `縦向きのスマホを画面をこちらに向け、目印の<b>すぐ${e.side}横・目の高さ</b>で壁に当てる`,
+    `壁に沿って<b>${e.side}へ</b>ゆっくりずらす。点が消えたら止める＝<b>1点目（鼻側）</b>。以後、壁に当てたまま動かさない`,
+    `下のボタンを<b>押し続け、点が見えた瞬間に離す</b>＝2点目（外）。鼻側は測り直さない`,
+    `点が中間に戻ったら、<b>上→下→外の斜め上→外の斜め下→鼻側の斜め上→鼻側の斜め下</b>。合計8点`
+
   ];
   $('prepList').innerHTML = items.map((t, i) => `<li><span class="no">${i+1}</span><span>${t}</span></li>`).join('');
   $('skipEye').style.display = eye === 'L' ? 'block' : 'none';
   show('s-prep');
 }
-$('goPrepR').addEventListener('click', () => { window.session = { date: Date.now(), R:null, L:null }; openPrep('R'); });
+$('goPrepR').addEventListener('click', () => { window.session = { date: Date.now(), method:'wall30', R:null, L:null }; if(!localStorage.getItem(LS.demo)) openDemo(() => openPrep('R')); else openPrep('R'); });
 $('skipEye').addEventListener('click', () => finishSession());
 $('startMeas').addEventListener('click', () => startMeasure(window.prepEye));
 
@@ -422,8 +477,7 @@ function startMeasure(eye){
   $('meas').classList.add('on');      // 先に出す（隠れたままだとボタンの位置が測れない）
   const a = area();
   const sign = EYE[eye].outSign;
-  /* 開始点は真ん中より少し鼻側に置く。盲点は横に約5〜6度あり、画面の真ん中から外へ動かすと
-     腕の長さでは画面の端に届いてしまうことがあるため、外側に余白を残す */
+  // 中央より14%鼻側から始め、外側の測定余白を残す。
   const sx = a.W / 2 - sign * a.W * 0.14;
   const sy = (a.top + a.bottom) / 2;
   window.run = { eye, sign, start:{x:sx, y:sy}, center:null, points:[], idx:0, pos:{x:sx, y:sy},
@@ -431,7 +485,7 @@ function startMeasure(eye){
   keepAwake(true);
   placeDot(sx, sy);
   updateMeasUI();
-  say(`${EYE[eye].cover}を覆って、遠くの一点を見続けます。スマホを${EYE[eye].side}へずらして、点が消えたら、ボタンを押し続けてください`);
+  say(`${EYE[eye].cover}を覆って、壁の目印だけを見続けます。スマホを壁に沿って${EYE[eye].side}へずらし、点が消えたら止めて、ボタンを押し続けてください`);
 }
 
 function placeDot(x, y){ dotEl.style.left = x + 'px'; dotEl.style.top = y + 'px'; }
@@ -439,11 +493,11 @@ function placeDot(x, y){ dotEl.style.left = x + 'px'; dotEl.style.top = y + 'px'
 function updateMeasUI(){
   const r = window.run, d = DIRS[r.idx];
   const e = EYE[r.eye];
-  $('mStatus').textContent = `${e.label}　${r.idx + 1} / 8　${d.name}`;
+  $('mStatus').textContent = `${e.label}　${r.idx + 2} / 8　${d.name}`;
   if(r.pressing){
     holdEl.innerHTML = `見えたら はなす<small>点が${dirWord(d, r.sign)}へ動いています</small>`;
   }else if(r.idx === 0){
-    holdEl.innerHTML = `点が消えたら 押しつづける<small>スマホを${e.side}へずらして点を消す</small>`;
+    holdEl.innerHTML = `点が消えたら 押しつづける<small>壁に沿って${e.side}へ。消えたら止めて固定</small>`;
   }else{
     holdEl.innerHTML = `押しつづける → ${dirWord(d, r.sign)}<small>見えたら はなす</small>`;
   }
@@ -504,6 +558,7 @@ function pressEnd(ev){
   const moved = Math.hypot(r.pos.x - r.from.x, r.pos.y - r.from.y);
   if(moved < MIN_MOVE){ updateMeasUI(); return; }   // 押し間違い
   const p = { x:r.pos.x, y:r.pos.y, edge:r.edge, dir:DIRS[r.idx].key };
+  if(r.idx === 0) r.points.push({ x:r.start.x, y:r.start.y, edge:false, dir:'in' });
   r.points.push(p);
   if(r.idx === 0){
     // 開始点（消えた所）と、外で見えた所のちょうど中間＝盲点の中から残りを測る
@@ -512,10 +567,10 @@ function pressEnd(ev){
   beep(880, 90);
   if(navigator.vibrate) navigator.vibrate(30);
   r.idx++;
-  if(r.idx >= DIRS.length){ endEye(); return; }
+  if(r.points.length === 8){ endEye(); return; }
   placeDot(r.center.x, r.center.y);
   updateMeasUI();
-  say(`${r.idx + 1}か所め。次は${DIRS[r.idx].say}`);
+  say(`${r.idx + 2}か所め。次は${DIRS[r.idx].say}`);
 }
 
 holdEl.addEventListener('pointerdown', pressStart);
@@ -526,7 +581,7 @@ holdEl.addEventListener('contextmenu', e => e.preventDefault());
 $('mUndo').addEventListener('click', () => {
   const r = window.run; if(!r || r.pressing || r.idx === 0) return;
   r.points.pop(); r.idx--;
-  if(r.idx === 0){ r.center = null; placeDot(r.start.x, r.start.y); }
+  if(r.idx === 0){ r.points.pop(); r.center = null; placeDot(r.start.x, r.start.y); }
   else placeDot(r.center.x, r.center.y);
   updateMeasUI();
   say(`1つ戻しました。${DIRS[r.idx].say}をやり直します`);
@@ -624,17 +679,18 @@ function mapSVG(st, prevSt, eye, half){
   const color = eye === 'R' ? 'var(--eyeR)' : 'var(--eyeL)';
   const mirror = eye === 'L';     // 画面に出すときは左目を元の向き（外＝左）に戻す
   const v = `${-half} ${-half} ${half*2} ${half*2}`;
-  let body = `<line x1="${-half}" y1="0" x2="${half}" y2="0" stroke="#c8d0d2" stroke-width="1" vector-effect="non-scaling-stroke"/>
-    <line x1="0" y1="${-half}" x2="0" y2="${half}" stroke="#c8d0d2" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
-  if(prevSt) body += svgPoly(prevSt.poly, eye, mirror, '#7a8a8e', true);
+  let body = `<line x1="${-half}" y1="0" x2="${half}" y2="0" stroke="rgba(216,189,132,.15)" stroke-width="1" vector-effect="non-scaling-stroke"/>
+    <line x1="0" y1="${-half}" x2="0" y2="${half}" stroke="rgba(216,189,132,.15)" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+  if(prevSt) body += svgPoly(prevSt.poly, eye, mirror, '#888580', true);
   if(st) body += svgPoly(st.poly, eye, mirror, color, false);
-  else body += `<text x="0" y="6" text-anchor="middle" font-size="${half/6}" fill="#7a8a8e">未測定</text>`;
+  else body += `<text x="0" y="6" text-anchor="middle" font-size="${half/6}" fill="#888580">未測定</text>`;
   return `<svg viewBox="${v}" role="img" aria-label="${EYE[eye].label}の盲点の形">${body}</svg>`;
 }
 
 function pct(a, b){ return Math.round((a / b - 1) * 100); }
 
 function renderResult(s, prev){
+  if(prev && prev.method !== s.method) prev = null;   // 測り方（腕の長さ／壁30cm）が違う記録とは面積を比べない
   const R = stats(s.R), L = stats(s.L);
   const pR = prev ? stats(prev.R) : null, pL = prev ? stats(prev.L) : null;
   const half = scaleOf([R, L, pR, pL]);
@@ -652,8 +708,8 @@ function renderResult(s, prev){
     $('overlayBox').style.display = 'block';
     $('overlayBox').innerHTML = `<div class="cap">重ねて比べる（左目を裏返して、外側を右にそろえた形）</div>
       <svg viewBox="${v}" style="max-width:260px;margin:0 auto;">
-        <line x1="${-half}" y1="0" x2="${half}" y2="0" stroke="#c8d0d2" vector-effect="non-scaling-stroke"/>
-        <line x1="0" y1="${-half}" x2="0" y2="${half}" stroke="#c8d0d2" vector-effect="non-scaling-stroke"/>
+        <line x1="${-half}" y1="0" x2="${half}" y2="0" stroke="rgba(216,189,132,.15)" vector-effect="non-scaling-stroke"/>
+        <line x1="0" y1="${-half}" x2="0" y2="${half}" stroke="rgba(216,189,132,.15)" vector-effect="non-scaling-stroke"/>
         ${svgPoly(L.poly, 'L', false, 'var(--eyeL)', false)}${svgPoly(R.poly, 'R', false, 'var(--eyeR)', false)}
       </svg>`;
   }else{ $('overlayBox').style.display = 'none'; }
@@ -712,7 +768,7 @@ function readingHTML(R, L, pR, pL){
     if(parts.length) out.push(`<p><b>前回との比較（面積）：</b>${parts.join('／')}。点線が前回の形です。ドリルの前後で小さくなれば、脳に変化が起きた手がかりになります。</p>`);
   }
   if((R && R.edge) || (L && L.edge)){
-    out.push(`<p style="color:var(--danger);">赤い点は画面の端で止まった所です（本当の盲点の端はもっと外）。スマホを少し近づけて、<b>両目とも同じ距離で</b>測り直してください。</p>`);
+    out.push(`<p style="color:var(--danger);">赤い点は画面の端で止まった所です（本当の盲点の端はもっと外）。目と壁の距離を少し縮めて（25cmくらい）、<b>両目とも同じ距離で</b>測り直してください。</p>`);
   }
   out.push(`<p class="note">⚠ あくまでスクリーニング。ここですべてが分かるのではなく、「疑わしい」と当たりをつけて次のアセスメントに進むためのものです。一点を見続けられなかったときは、結果を過信せず注視のドリルを先に。<br>区切り（面積の差10%・上下55:45）はアプリの表示上の目安で、正常値ではありません。</p>`);
   return out.join('');
@@ -741,7 +797,7 @@ function nextHTML(R, L){
   return out.join('');
 }
 
-$('again').addEventListener('click', () => { window.session = { date: Date.now(), R:null, L:null }; openPrep('R'); });
+$('again').addEventListener('click', () => { window.session = { date: Date.now(), method:'wall30', R:null, L:null }; openPrep('R'); });
 $('toHome').addEventListener('click', () => { window.session = null; maybeReload(); show('s-home'); renderHistory(); });
 
 /* =========================================================
@@ -794,6 +850,137 @@ syncSeg('speedSeg', window.settings.speed);
 syncSeg('voiceSeg', window.settings.voice ? 1 : 0);
 renderHistory();
 
+/* デモは測定と別の描画ループで動かす。座標は説明図用で測定値ではない。 */
+const DEMO_SCENES = [
+  [6, '壁の前に立ち、目と壁の距離を約30cmにします。'],
+  [5, '壁の目の高さに、見つめる目印を1つ作ります。シールや壁のしみでも大丈夫です。'],
+  [5, '右目を測ります。左手で左目を覆い、壁の目印だけを見続けます。'],
+  [7, 'スマホを縦向きにし、目印のすぐ右横で、目の高さに壁へ当てます。画面はこちらへ。'],
+  [8, '目印を見たまま、スマホを壁に沿って右へ。点が消えたら止めます。ここが1点目、鼻側の端です。'],
+  [8, 'スマホを動かさず、下のボタンを押し続けます。点が外へ動き、見えた瞬間に離します。これが2点目です。'],
+  [8, '点が中間に戻ります。上、下、外の斜め上、外の斜め下、鼻側の斜め上、鼻側の斜め下。合計8点です。'],
+  [7, '左目も同じです。右目を覆い、目印の左側で、壁に沿って左へずらします。距離は右目と同じです。'],
+  [6, '左右の形と大きさを比べます。では測ってみましょう。']
+];
+const demoState = { open:false, index:0, elapsed:0, last:0, paused:false, raf:0, after:null, focus:null };
+function demoScene(index){
+  demoState.index = Math.max(0, Math.min(DEMO_SCENES.length - 1, index));
+  demoState.elapsed = 0; demoState.last = performance.now();
+  $('demoCaption').textContent = DEMO_SCENES[demoState.index][1];
+  $('demoPrev').disabled = demoState.index === 0;
+  $('demoNext').textContent = demoState.index === DEMO_SCENES.length - 1 ? '測ってみる ▶' : '次 ▶';
+  [...$('demoDots').children].forEach((el,i) => {el.classList.toggle('on', i === demoState.index); el.setAttribute('aria-current', i === demoState.index ? 'step' : 'false');});
+  if(!demoState.paused) say(DEMO_SCENES[demoState.index][1]);
+  drawDemo();
+}
+function openDemo(after=null){
+  openMenu(false); unlockAudio();
+  demoState.focus = document.activeElement; demoState.after = after;
+  demoState.open = true; demoState.paused = false;
+  $('demo').classList.add('on'); $('demo').setAttribute('aria-hidden','false');
+  document.body.classList.add('demoing');
+  document.querySelector('.app').inert = true;
+  $('demoPause').textContent = '❚❚ 一時停止'; demoScene(0); $('demoClose').focus();
+  cancelAnimationFrame(demoState.raf); demoState.raf = requestAnimationFrame(demoTick);
+}
+function closeDemo(){
+  if(!demoState.open) return;
+  demoState.open = false; cancelAnimationFrame(demoState.raf);
+  if('speechSynthesis' in window) speechSynthesis.cancel();
+  localStorage.setItem(LS.demo,'1');
+  $('demo').classList.remove('on'); $('demo').setAttribute('aria-hidden','true');
+  document.body.classList.remove('demoing'); document.querySelector('.app').inert = false;
+  const after = demoState.after; demoState.after = null;
+  if(after) {after(); $('startMeas').focus();} else { demoState.focus?.focus(); maybeReload(); }
+}
+function demoTick(t){
+  if(!demoState.open) return;
+  if(!demoState.paused && !document.hidden) demoState.elapsed += Math.min((t-demoState.last)/1000, .1);
+  demoState.last = t;
+  if(demoState.elapsed >= DEMO_SCENES[demoState.index][0]){
+    if(demoState.index === DEMO_SCENES.length - 1){ closeDemo(); return; }
+    demoScene(demoState.index+1);
+  }
+  drawDemo(); demoState.raf = requestAnimationFrame(demoTick);
+}
+function drawDemo(){
+  const i = demoState.index, t = Math.min(1, demoState.elapsed / DEMO_SCENES[i][0]);
+  const ease = v => {v=Math.max(0,Math.min(1,v));return v*v*(3-2*v);};
+  const gold='#d8bd84', ink='#f4f1ea';
+  const text=(x,y,s,size=16,color=gold)=>`<text x="${x}" y="${y}" text-anchor="middle" fill="${color}" font-size="${size}">${s}</text>`;
+  const circle=(x,y,r,color=gold)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${color}"/>`;
+  const line=(x,y,x2,y2,color=gold,extra='')=>`<line x1="${x}" y1="${y}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2" ${extra}/>`;
+  const face=(cover=false)=>`<g fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"><ellipse cx="180" cy="180" rx="50" ry="64"/><path d="M130 280 Q180 240 230 280 M167 186 L178 200 L187 196 M163 220 Q180 230 197 220"/></g>${circle(160,173,4,ink)}${circle(200,173,4,ink)}${cover?`<path d="M121 279 Q108 220 140 158 Q153 144 166 164 L175 194 Q150 222 151 271" fill="#1a1916" stroke="${gold}" stroke-width="3"/>`:''}`;
+  const fixation=circle(115,155,5,gold)+text(115,123,'壁の目印',14);
+  const blind=`<ellipse cx="310" cy="155" rx="42" ry="59" fill="${gold}" fill-opacity=".06" stroke="${gold}" stroke-opacity=".5" stroke-dasharray="5 6"/>`;
+  const phone=(x,dx=0,dy=0,opacity=1,pressed=false)=>`<g transform="translate(${x} 73)"><rect width="150" height="260" rx="17" fill="#f4f1ea" stroke="${gold}" stroke-width="2"/><rect x="6" y="198" width="138" height="51" rx="14" fill="${pressed?gold:'#141414'}" stroke="#a8874f"/><text x="75" y="220" text-anchor="middle" fill="${pressed?'#141008':gold}" font-size="10">${pressed?'見えたら はなす':'押しつづける'}</text><text x="75" y="236" text-anchor="middle" fill="${pressed?'#141008':gold}" font-size="8">見えたら はなす</text><circle cx="${40+dx}" cy="${82+dy}" r="5" fill="#111" opacity="${opacity}"/>${opacity<1?`<circle cx="${40+dx}" cy="${82+dy}" r="7" fill="none" stroke="#9d978b" stroke-width="1.5" stroke-dasharray="3 3"/>`:''}</g>`;
+  let art='';
+  if(i===0){
+    art=`<path d="M365 50 V340 M365 335 H70" fill="none" stroke="#686154" stroke-width="3"/><g fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round"><path d="M120 292 L135 216 L123 198 Q105 182 111 147 Q115 113 146 117 Q171 120 175 145 L188 159 L174 165 L171 187 Q162 201 149 200 M140 218 L191 236 L279 160 M135 257 L105 335 M135 257 L164 335"/></g>${circle(165,148,3,ink)}${line(165,88,365,88)}${line(165,80,165,96)}${line(365,80,365,96)}${text(265,73,'約30cm',22)}${line(170,148,365,148,gold,'stroke-dasharray="5 5"')}${text(365,365,'壁',18)}`;
+  }else if(i===1){
+    art=`<rect x="55" y="65" width="370" height="270" rx="6" fill="#151411" stroke="#484238"/>${line(70,155,410,155,'#484238','stroke-dasharray="5 5"')}${text(240,107,'目の高さ',20)}<g transform="translate(${260-145*ease(t)} ${80+75*ease(t)})"><path d="M10 80 L-5 18 Q-12 -5 0 -6 L12 15 L34 25 L40 80" fill="#1a1916" stroke="${gold}" stroke-width="3"/>${circle(0,0,6,gold)}</g>${t>.7?fixation:''}`;
+  }else if(i===2){
+    art=face(true)+text(180,320,'左手で左目を覆う',20)+text(365,153,'右目で',17)+text(365,180,'目印を見る',17)+text(240,45,'本人から見た左右の図',13,'#9d978b');
+  }else if(i>=3 && i<=7 && i!==6){
+    const mirror=i===7;
+    const progress=i===4?ease(t/.64):i===7?ease(t/.7):0;
+    const x=i===5?228:145+83*progress;
+    const dx=i===5?100*ease(t/.75):0;
+    const hidden=i===5?(dx<84):progress>.98;
+    art=`<g ${mirror?'transform="translate(480 0) scale(-1 1)"':''}>${fixation}${phone(x,dx,0,hidden?.07:1,i===5&&dx<84)}${blind}${i===5?line(268,155,268+dx,155,gold)+circle(268,155,5)+ (dx>=84?circle(268+dx,155,5):''):''}${i===5&&dx<84?'<path d="M290 355 Q266 329 276 304 Q285 283 294 294 L307 319 L331 336" fill="#302b22" stroke="#d8bd84" stroke-width="3"/>':''}</g>`;
+    art+=text(240,38,mirror?'左目：右目を覆い、左へ':'右目：左目を覆い、右へ',18);
+    art+=text(240,370,'目は壁の目印を見たまま・スマホは壁に当てる',13,'#9d978b');
+    if(i===3) art+=text(320,56,'盲点（見えない範囲）',13);
+    if(i===4 && hidden) art+=text(240,405,'消えた！ここで止める＝1点目（鼻側の端）',16);
+    if(i===5 && dx>=84) art+=text(240,405,'見えたら離す＝2点目',18);
+    if(i===5 && dx<84) art+=text(240,405,'点は盲点の中＝本人には見えていない',15,'#9d978b');
+  }else if(i===6){
+    const points=[[200,177],[284,177],[242,116],[242,244],[273,132],[276,224],[212,134],[210,224]];
+    const q=t*7, n=Math.min(6,Math.floor(q));
+    const center=[242,177];
+    const start=q<1?[284,177]:center;
+    const end=q<1?center:points[n+1];
+    const f=ease(q-Math.floor(q));
+    const px=start[0]+(end[0]-start[0])*f,py=start[1]+(end[1]-start[1])*f;
+    art=phone(160,px-200,py-155,.1,true)+text(240,40,'スマホは固定・点だけが動く',18);
+    points.slice(0,Math.max(2,n+1)).forEach(p=>{art+=circle(...p,4);});
+    if(q>=1) art+=line(...center,px,py)+circle(px,py,5);
+    if(t>.96) art+=`<polygon points="${[0,6,2,4,1,5,3,7].map(j=>points[j].join(',')).join(' ')}" fill="${gold}" fill-opacity=".12" stroke="${gold}" stroke-width="2"/>`;
+    art+=text(240,380,'鼻側の開始点＋外・上・下・斜め4つ＝8点',15);
+  }else{
+    art=text(240,48,'BLIND SPOT MAP',26)+text(240,88,'左右の形と大きさを比べる',18);
+    [130,350].forEach((x,j)=>{
+      art+=`<rect x="${x-95}" y="120" width="190" height="205" rx="16" fill="#0e0e0f" stroke="#484238"/>`;
+      art+=line(x-78,220,x+78,220,'#37332c')+line(x,155,x,295,'#37332c');
+      art+=`<polygon points="${[[-34,0],[-24,-43],[0,-59],[29,-38],[39,0],[29,43],[0,65],[-26,42]].map(([a,b])=>`${x+a},${220+b}`).join(' ')}" fill="${j?'#e0a458':'#7fa8d8'}" fill-opacity=".22" stroke="${j?'#e0a458':'#7fa8d8'}" stroke-width="2"/>`;
+      art+=text(x,146,j?'右目':'左目',16,j?'#e0a458':'#7fa8d8');
+    });
+    art+=text(240,386,'では測ってみましょう',24);
+  }
+  $('demoArt').innerHTML=art;
+}
+$('demoDots').innerHTML=DEMO_SCENES.map((_,i)=>`<button aria-label="場面${i+1}" data-scene="${i}"></button>`).join('');
+$('demoDots').addEventListener('click',e=>{const b=e.target.closest('button');if(b) demoScene(Number(b.dataset.scene));});
+$('demoClose').addEventListener('click',closeDemo);
+$('demoPrev').addEventListener('click',()=>demoScene(demoState.index-1));
+$('demoNext').addEventListener('click',()=>{if(demoState.index===DEMO_SCENES.length-1)closeDemo();else demoScene(demoState.index+1);});
+$('demoPause').addEventListener('click',()=>{
+  demoState.paused=!demoState.paused; demoState.last=performance.now();
+  $('demoPause').textContent=demoState.paused?'▶ 再生':'❚❚ 一時停止';
+  if(demoState.paused){if('speechSynthesis' in window)speechSynthesis.cancel();}else say(DEMO_SCENES[demoState.index][1]);
+});
+['homeDemo','prepDemo','menuDemo'].forEach(id=>$(id).addEventListener('click',()=>openDemo()));
+document.addEventListener('keydown',e=>{
+  if(!demoState.open)return;
+  if(e.key==='Escape'){e.preventDefault();closeDemo();}
+  if(e.key==='Tab'){
+    const items=[...$('demo').querySelectorAll('button:not(:disabled)')];
+    const first=items[0],last=items[items.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  }
+});
+
 /* =========================================================
    Service Worker 登録 ＋ controllerchange で自動リロード
    ========================================================= */
@@ -801,7 +988,7 @@ if('serviceWorker' in navigator){
   let refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if(refreshing) return; refreshing = true;
-    if(window.run){ window.pendingReload = true; return; }   // 測定中は再読み込みしない（途中の点が消えるため）
+    if(window.run || demoState.open){ window.pendingReload = true; return; }   // 測定中は再読み込みしない（途中の点が消えるため）
     window.location.reload();
   });
   window.addEventListener('load', () => {

@@ -2,7 +2,7 @@
 // 戦略：Network First（新しいコードを最優先で拾う → 開発ナレッジ準拠）。
 //       オフライン時のみキャッシュへフォールバック。
 // index.html 側で controllerchange を検知して location.reload() する前提。
-const CACHE_NAME = 'moten-map-v1.0.0';
+const CACHE_NAME = 'moten-map-v2.0.0';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -10,7 +10,7 @@ const ASSETS_TO_CACHE = [
   './manifest.json',
   './FNT512.png',
   './FNT512-transparent.png',
-  'https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap'
+  'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Shippori+Mincho:wght@500;700&family=Cormorant+Garamond:wght@500;600&display=swap'
 ];
 
 // インストール：app shell をプリキャッシュし即 skipWaiting
