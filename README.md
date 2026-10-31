@@ -33,3 +33,5 @@ index.html（本体）／manifest.json／sw.js（Network First、CACHE_NAME を�
 
 ## 動かす
 `python3 -m http.server 8080` → http://localhost:8080/
+
+音声は ElevenLabs（リョウ）で前もって作った voice/*.mp3。文を変えたら `python3 tools/voice_build.py`。
