@@ -962,7 +962,7 @@ const DEMO_SCENES = [
 const demoState = { open:false, index:0, elapsed:0, last:0, paused:false, raf:0, after:null, focus:null };
 function demoScene(index){
   demoState.index = Math.max(0, Math.min(DEMO_SCENES.length - 1, index));
-  demoState.elapsed = 0; demoState.last = performance.now();
+  demoState.elapsed = 0; demoState.vt = 0; demoState.last = performance.now();
   $('demoCaption').textContent = DEMO_SCENES[demoState.index][1];
   $('demoPrev').disabled = demoState.index === 0;
   $('demoNext').textContent = demoState.index === DEMO_SCENES.length - 1 ? '測ってみる ▶' : '次 ▶';
@@ -994,7 +994,7 @@ function demoTick(t){
   if(!demoState.open) return;
   if(!demoState.paused && !document.hidden) demoState.elapsed += Math.min((t-demoState.last)/1000, .1);
   demoState.last = t;
-  const talking = window.settings.voice && ((!VA.paused && !VA.ended) || ('speechSynthesis' in window && speechSynthesis.speaking));
+  const talking = window.settings.voice && demoState.elapsed - (demoState.vt||0) < 20 && ((!VA.paused && !VA.ended && !VA.error) || ('speechSynthesis' in window && speechSynthesis.speaking));   // 音声が取れなかったとき VA は「再生中」のまま残るので error も見る。念のため声を出してから20秒で打ち切る
   if(demoState.elapsed >= DEMO_SCENES[demoState.index][0] && !talking && !demoState.paused){   // 声を最後まで聞かせてから次の場面へ
     if(demoState.index === DEMO_SCENES.length - 1){ closeDemo(); return; }
     demoScene(demoState.index+1);
@@ -1065,7 +1065,7 @@ $('demoNext').addEventListener('click',()=>{if(demoState.index===DEMO_SCENES.len
 $('demoPause').addEventListener('click',()=>{
   demoState.paused=!demoState.paused; demoState.last=performance.now();
   $('demoPause').textContent=demoState.paused?'▶ 再生':'❚❚ 一時停止';
-  if(demoState.paused){hush();}else say(DEMO_SCENES[demoState.index][1]);
+  if(demoState.paused){hush();}else{ demoState.vt=demoState.elapsed; say(DEMO_SCENES[demoState.index][1]); }   // 声は頭から読み直すので、待ちの打ち切りも数え直す
 });
 ['homeDemo','prepDemo','menuDemo'].forEach(id=>$(id).addEventListener('click',()=>openDemo()));
 document.addEventListener('keydown',e=>{
