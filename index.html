@@ -240,6 +240,7 @@
       <div class="cta">
         <button class="btn" id="startMeas">測定をはじめる</button>
         <button class="btn sub" id="skipEye" style="display:none;">左目は測らずに結果を見る</button>
+        <button class="btn sub" id="checkBack" style="display:none;font-size:13px;">やめてチェックの結果に戻る</button>
       </div>
     </section>
 
@@ -344,6 +345,16 @@
 <script>
 'use strict';
 const $ = (id) => document.getElementById(id);
+const CHECK_BACK = (() => {
+  const match = location.search.match(/(?:^\?|&)back=([^&]*)/);
+  if(!match) return null;
+  try{
+    const back = decodeURIComponent(match[1].replace(/\+/g, ' '));
+    if(!back.startsWith('/') || back.startsWith('//')) return null;
+    const u = new URL(back, location.origin);   // 「/\外のサイト」のような書き方で外へ飛ばないよう、同じドメインだけ通す
+    return u.origin === location.origin ? u.pathname + u.search : null;
+  }catch(e){ return null; }
+})();
 
 /* =========================================================
    設定・状態（iOS のメモリ対策で window に載せる）
@@ -457,6 +468,10 @@ function openPrep(eye){
 }
 $('goPrepR').addEventListener('click', () => { window.session = { date: Date.now(), method:'wall30', R:null, L:null }; if(!localStorage.getItem(LS.demo)) openDemo(() => openPrep('R')); else openPrep('R'); });
 $('skipEye').addEventListener('click', () => finishSession());
+if(CHECK_BACK){
+  $('checkBack').style.display = 'block';
+  $('checkBack').addEventListener('click', () => location.replace(CHECK_BACK));
+}
 $('startMeas').addEventListener('click', () => startMeasure(window.prepEye));
 
 /* =========================================================
@@ -620,10 +635,26 @@ function endEye(){
 
 function finishSession(){
   const s = window.session;
-  if(!s || (!s.R && !s.L)){ show('s-home'); return; }
+  if(!s || (!s.R && !s.L)){
+    if(CHECK_BACK) location.replace(CHECK_BACK);
+    else show('s-home');
+    return;
+  }
   const hist = loadHist();
   hist.unshift(s);
   localStorage.setItem(LS.hist, JSON.stringify(hist.slice(0, 30)));
+  if(CHECK_BACK){
+    const sum = e => {
+      if(!e) return null;
+      const st = stats(e);
+      return { A:Math.round(st.A), w:Math.round(st.w), h:Math.round(st.h),
+        up:Math.round(st.upShare*100)/100, edge:st.edge, W:e.W, H:e.H,
+        pts:st.poly.map(p => [Math.round(p.x), Math.round(p.y), p.edge ? 1 : 0]) };
+    };
+    localStorage.setItem('chk_bs', JSON.stringify({ at:s.date, method:s.method, R:sum(s.R), L:sum(s.L) }));
+    location.replace(CHECK_BACK + '#bs=' + s.date);
+    return;
+  }
   renderResult(s, hist[1] || null);
 }
 
@@ -984,7 +1015,7 @@ document.addEventListener('keydown',e=>{
 /* =========================================================
    Service Worker 登録 ＋ controllerchange で自動リロード
    ========================================================= */
-if('serviceWorker' in navigator){
+if(!CHECK_BACK && 'serviceWorker' in navigator){
   let refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if(refreshing) return; refreshing = true;
@@ -994,6 +1025,11 @@ if('serviceWorker' in navigator){
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(err => console.warn('[SW] register failed', err));
   });
+}
+if(CHECK_BACK){
+  $('splash').classList.add('hide');
+  $('s-home').classList.remove('active');
+  $('goPrepR').click();
 }
 </script>
 </body>
