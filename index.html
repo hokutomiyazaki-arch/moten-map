@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#0b1a20" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="盲点マップ" />
+<meta name="description" content="スマホ1台で、右目と左目の盲点の大きさと形を8方向から測り、左右を比べるスクリーニング。Functional Neuro TrainingのLite PWA。" />
+<title>盲点マップ ─ 盲点の大きさと形を左右で比べる / Functional Neuro Training</title>
+
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet" />
+
+<style>
+  /* ===== 配色：ユニバーサルデザイン（FNT共通） ===== */
+  :root{
+    --bg0:#0b1a20; --bg1:#123138; --bg2:#16414a;
+    --accent:#7fe0cd; --accent2:#3fa895; --accentInk:#06231d;
+    --ink:#f2faf7; --muted:#a8c6bf; --line:rgba(255,255,255,.12);
+    --card:rgba(255,255,255,.07); --danger:#ffb4a8;
+    --eyeR:#ffa94d; --eyeL:#4ea8ff;   /* 右目＝オレンジ／左目＝青（色覚の差に強い組み合わせ） */
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html,body{ overflow-x:hidden; max-width:100%; }
+  body{
+    font-family:"M PLUS Rounded 1c", system-ui, sans-serif; font-weight:700;
+    color:var(--ink); line-height:1.7;
+    background:radial-gradient(120% 90% at 50% 6%, var(--bg2) 0%, var(--bg1) 44%, var(--bg0) 100%);
+    background-attachment:fixed; min-height:100vh; min-height:100dvh;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  /* 測定中は画面を固定（押しっぱなしでスクロール・長押しメニューが出ないように） */
+  body.measuring{ overflow:hidden; touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  button{ font-family:inherit; font-weight:700; cursor:pointer; border:none; }
+  a{ color:var(--accent); }
+  :focus-visible{ outline:3px solid var(--accent); outline-offset:3px; border-radius:8px; }
+
+  /* ===== スプラッシュ ===== */
+  #splash{ position:fixed; inset:0; z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:32px; background:radial-gradient(120% 90% at 50% 20%, var(--bg2) 0%, var(--bg1) 45%, var(--bg0) 100%);
+    transition:opacity .45s ease, visibility .45s ease; }
+  #splash.hide{ opacity:0; visibility:hidden; pointer-events:none; }
+  #splash img{ width:132px; height:132px; margin-bottom:22px; border-radius:26px; }
+  #splash .fnt{ font-size:13px; letter-spacing:.24em; color:var(--muted); margin-bottom:14px; }
+  #splash h1{ font-size:30px; font-weight:800; color:var(--accent); margin-bottom:10px; }
+  #splash .lead{ font-size:14px; color:var(--muted); margin-bottom:30px; }
+  #splash .tapstart{ min-height:52px; padding:14px 34px; border-radius:16px; font-size:17px; font-weight:800;
+    color:var(--accentInk); background:linear-gradient(180deg,var(--accent),var(--accent2)); animation:breathe 2.4s ease-in-out infinite; }
+  #splash .copy{ position:absolute; bottom:calc(20px + env(safe-area-inset-bottom)); font-size:11px; color:var(--muted); }
+  @keyframes breathe{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.05); } }
+
+  /* ===== レイアウト ===== */
+  .app{ width:100%; max-width:480px; margin:0 auto; min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; }
+  header{ display:flex; align-items:center; justify-content:space-between; padding:12px 16px 4px; }
+  .logo{ display:flex; align-items:center; gap:10px; }
+  .logo img{ width:34px; height:34px; }
+  .logo b{ font-size:15px; font-weight:800; }
+  .menuBtn{ width:46px; height:46px; border-radius:12px; background:var(--card); color:var(--ink); font-size:22px; }
+  main{ flex:1; display:flex; flex-direction:column; padding:8px 20px 4px; }
+  .screen{ display:none; flex:1; flex-direction:column; }
+  .screen.active{ display:flex; }
+  .step-label{ font-size:12px; letter-spacing:.16em; color:var(--accent); margin-bottom:8px; }
+  h2{ font-size:23px; font-weight:800; line-height:1.5; margin-bottom:14px; }
+  h3{ font-size:17px; font-weight:800; margin:20px 0 8px; color:var(--accent); }
+  .desc{ font-size:15px; color:var(--muted); line-height:1.9; }
+  .desc b{ color:var(--ink); }
+  .setupList{ list-style:none; margin:16px 0; display:flex; flex-direction:column; gap:12px; }
+  .setupList li{ display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:14px;
+    background:var(--card); border:1px solid var(--line); font-size:15px; line-height:1.7; }
+  .setupList .no{ flex:none; width:26px; height:26px; border-radius:50%; background:var(--accent);
+    color:var(--accentInk); font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center; }
+  .cta{ margin-top:auto; padding:18px 0 8px; display:flex; flex-direction:column; gap:10px; }
+  .btn{ width:100%; min-height:54px; padding:16px; border-radius:16px; font-size:17px; font-weight:800;
+    color:var(--accentInk); background:linear-gradient(180deg,var(--accent),var(--accent2)); }
+  .btn.sub{ color:var(--ink); background:var(--card); border:1px solid var(--line); }
+  .card{ padding:16px 18px; border-radius:16px; background:var(--card); border:1px solid var(--line); font-size:15px; line-height:1.85; }
+  .card + .card{ margin-top:12px; }
+  .note{ font-size:12.5px; color:var(--muted); line-height:1.8; margin-top:10px; }
+  .eyeTag{ display:inline-block; padding:1px 10px; border-radius:999px; font-size:13px; font-weight:800; color:#111; }
+  .eyeTag.R{ background:var(--eyeR); } .eyeTag.L{ background:var(--eyeL); }
+
+  /* 記録（ホーム） */
+  .hist{ display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+  .hist button{ text-align:left; padding:12px 14px; border-radius:12px; background:var(--card); border:1px solid var(--line);
+    color:var(--ink); font-size:14px; }
+  .hist button small{ color:var(--muted); font-weight:500; margin-left:6px; }
+
+  /* ===== 測定画面：点だけ＋下に親指の大ボタン ===== */
+  #meas{ position:fixed; inset:0; z-index:200; display:none; background:#f4f6f7; }
+  #meas.on{ display:block; }
+  #dot{ position:absolute; width:12px; height:12px; margin:-6px 0 0 -6px; border-radius:50%; background:#111; }
+  #mStatus{ position:absolute; left:0; right:0; top:calc(env(safe-area-inset-top) + 8px); text-align:center;
+    font-size:12px; color:#9aa5a8; pointer-events:none; }
+  #mUndo, #mQuit{ position:absolute; top:calc(env(safe-area-inset-top) + 30px); min-height:40px; padding:8px 14px;
+    border-radius:12px; background:#e3e8ea; color:#55666b; font-size:13px; }
+  #mUndo{ left:12px; } #mQuit{ right:12px; }
+  #hold{ position:absolute; left:16px; right:16px; bottom:calc(env(safe-area-inset-bottom) + 16px); height:112px;
+    border-radius:28px; background:#1d3a40; color:#fff; font-size:20px; font-weight:800; line-height:1.4;
+    touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  #hold.pressing{ background:#3fa895; color:#06231d; }
+  #hold small{ display:block; font-size:13px; font-weight:700; opacity:.75; }
+
+  /* ===== 結果 ===== */
+  .maps{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:6px 0 4px; }
+  .mapBox{ border-radius:14px; background:#f4f6f7; padding:6px; text-align:center; }
+  .mapBox .cap{ font-size:13px; color:#33474c; font-weight:800; }
+  .mapBox svg{ width:100%; height:auto; display:block; }
+  .overlayBox{ margin-top:10px; }
+  table.num{ width:100%; border-collapse:collapse; font-size:14px; margin-top:6px; }
+  table.num th, table.num td{ padding:7px 4px; border-bottom:1px solid var(--line); text-align:center; }
+  table.num th:first-child, table.num td:first-child{ text-align:left; color:var(--muted); font-weight:700; }
+  .read b{ color:var(--accent); }
+  .read p + p{ margin-top:8px; }
+  details.more{ margin-top:12px; }
+  details.more summary{ cursor:pointer; color:var(--accent); font-size:15px; padding:8px 0; }
+
+  footer{ padding:20px 20px calc(20px + env(safe-area-inset-bottom)); text-align:center; }
+  footer .med{ font-size:11.5px; color:var(--muted); line-height:1.8; }
+  .fnt-copy{ display:block; margin-top:14px; font-size:11px; letter-spacing:.14em; color:var(--muted); opacity:.8; }
+
+  /* ===== サイドメニュー（モーダルでない） ===== */
+  .overlay{ position:fixed; inset:0; z-index:80; background:rgba(0,0,0,.4); opacity:0; visibility:hidden; transition:.25s; }
+  .overlay.show{ opacity:1; visibility:visible; }
+  .side{ position:fixed; top:0; right:0; height:100%; width:min(84%,340px); z-index:90; overflow-y:auto;
+    background:var(--bg1); padding:calc(16px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom));
+    transform:translateX(105%); transition:transform .28s ease; display:flex; flex-direction:column; }
+  .side.open{ transform:translateX(0); }
+  .side .top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .side .top b{ font-size:16px; font-weight:800; }
+  .side .closeBtn{ width:44px; height:44px; border-radius:12px; background:var(--card); color:var(--ink); font-size:20px; }
+  .side h4{ font-size:12px; letter-spacing:.14em; color:var(--accent); margin:18px 0 10px; }
+  .side .row{ display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:14px; }
+  .seg{ display:flex; gap:6px; }
+  .seg button{ padding:8px 12px; border-radius:10px; background:var(--card); color:var(--muted); border:1px solid var(--line); font-size:13px; }
+  .seg button.on{ background:var(--accent); color:var(--accentInk); }
+  .side .guide{ font-size:13px; color:var(--muted); line-height:1.9; }
+  .side .guide ol{ padding-left:20px; }
+  .side .danger{ margin-top:8px; padding:10px; border-radius:10px; background:var(--card); color:var(--danger); font-size:13px; }
+  .side .learn{ margin-top:auto; padding-top:22px; }
+  .side .learn a{ font-size:14px; text-decoration:none; display:block; padding:10px 0; }
+  .side .side-copy{ font-size:10.5px; letter-spacing:.1em; color:var(--muted); opacity:.7; margin-top:14px; display:block; }
+
+  .toast{ position:fixed; left:50%; bottom:calc(150px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:300;
+    background:rgba(0,0,0,.82); color:#fff; padding:10px 18px; border-radius:12px; font-size:14px; opacity:0; transition:.25s; pointer-events:none; }
+  .toast.show{ opacity:1; }
+</style>
+</head>
+<body>
+
+<div id="splash" role="dialog" aria-label="盲点マップを開始">
+  <img src="FNT512.png" alt="FNT" />
+  <div class="fnt">FUNCTIONAL NEURO TRAINING</div>
+  <h1>盲点マップ</h1>
+  <p class="lead">右目と左目の盲点を8方向から測って、<br />大きさと形を左右で比べる</p>
+  <button class="tapstart" id="tapstart">タップしてはじめる</button>
+  <div class="copy">© Functional Neuro Training / Legrandchariot</div>
+</div>
+
+<div class="app">
+  <header>
+    <div class="logo"><img src="FNT512-transparent.png" alt="" /><b>盲点マップ</b></div>
+    <button class="menuBtn" id="menuBtn" aria-label="メニューを開く">☰</button>
+  </header>
+
+  <main>
+    <!-- S1 ホーム -->
+    <section class="screen active" id="s-home">
+      <div class="step-label">BLIND SPOT MAPPING</div>
+      <h2>盲点の大きさと形で、<br />左右どちらの皮質が弱っているかの当たりをつける</h2>
+      <p class="desc">目には、視神経が奥へ抜けていく場所（視神経乳頭）があり、そこは光を受け取れない＝<b>盲点</b>です。ふだんは周りの神経が働いて埋め合わせています。<b>盲点は小さい方がいい。</b>大きいほど、埋め合わせきれていないということ。</p>
+      <p class="desc" style="margin-top:8px;">右目 → 左目の順に、1つの目で8か所の点を取り、結んで形にします。ドリルの<b>前と後</b>で測ると、変化を見るものさしになります。</p>
+      <div id="histWrap" style="display:none;">
+        <h3>これまでの記録</h3>
+        <div class="hist" id="hist"></div>
+      </div>
+      <div class="cta">
+        <button class="btn" id="goPrepR">右目から測る</button>
+      </div>
+    </section>
+
+    <!-- S2 準備（目ごと） -->
+    <section class="screen" id="s-prep">
+      <div class="step-label" id="prepLabel">RIGHT EYE</div>
+      <h2 id="prepTitle">右目の盲点を測る</h2>
+      <ul class="setupList" id="prepList"></ul>
+      <p class="note">⚠ 一点を見続けられないと、きれいな形になりません。そのときは結果を過信せず、「見続ける力（注視）」のドリルを先にやりましょう。</p>
+      <div class="cta">
+        <button class="btn" id="startMeas">測定をはじめる</button>
+        <button class="btn sub" id="skipEye" style="display:none;">左目は測らずに結果を見る</button>
+      </div>
+    </section>
+
+    <!-- S3 結果 -->
+    <section class="screen" id="s-result">
+      <div class="step-label" id="resDate">RESULT</div>
+      <h2>盲点マップ</h2>
+      <div class="maps" id="maps"></div>
+      <div class="mapBox overlayBox" id="overlayBox"></div>
+      <div class="card" style="margin-top:12px;">
+        <table class="num" id="numTable"></table>
+        <p class="note">数字は画面上の大きさ（点の数＝px）。左右で<b>同じ距離</b>で測ったときだけ比べられます。</p>
+      </div>
+      <h3>読み方（BDC「皮質の左右差のアセスメント」より）</h3>
+      <div class="card read" id="reading"></div>
+      <details class="more">
+        <summary>▶ 次に何をするか</summary>
+        <div class="card read" id="nextSteps"></div>
+      </details>
+      <details class="more">
+        <summary>▶ なぜ右目で左の脳がわかるの？</summary>
+        <div class="card read">
+          <p>右側の視野から入った光は左の後頭葉へ、左側の視野は右の皮質へ届きます。ただし網膜では内外が逆になり、<b>網膜の内側（鼻側）に映る像は反対側の皮質</b>へ行きます。</p>
+          <p>盲点は網膜の<b>鼻側</b>（視野では耳側）にあるので、<b>右目の盲点＝左の皮質、左目の盲点＝右の皮質</b>を見ていることになります。</p>
+          <p>下側の視野は頭頂葉を、上側の視野は側頭葉を経由して後頭葉へ。だから<b>下が大きい盲点は頭頂葉、上が大きい盲点は側頭葉</b>の当たりをつけます。</p>
+        </div>
+      </details>
+      <div class="cta">
+        <button class="btn" id="again">もう一度測る</button>
+        <button class="btn sub" id="toHome">はじめの画面へ</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p class="med">このアプリは、からだの状態の当たりをつけるためのスクリーニングで、医療の検査・診断ではありません。急に見えにくくなった・視野が欠ける・眼の痛みがある、などのときは眼科を受診してください。</p>
+    <span class="fnt-copy">© Functional Neuro Training / Legrandchariot</span>
+  </footer>
+</div>
+
+<!-- 測定画面 -->
+<div id="meas" aria-label="測定中">
+  <div id="mStatus"></div>
+  <button id="mUndo">↺ 1つ戻す</button>
+  <button id="mQuit">やめる</button>
+  <div id="dot"></div>
+  <button id="hold"></button>
+</div>
+
+<!-- サイドメニュー -->
+<div class="overlay" id="overlay"></div>
+<nav class="side" id="side" aria-label="メニュー" aria-hidden="true">
+  <div class="top"><b>メニュー</b><button class="closeBtn" id="closeMenu" aria-label="メニューを閉じる">×</button></div>
+
+  <h4>点の動く速さ</h4>
+  <div class="row"><span>速さ</span>
+    <div class="seg" id="speedSeg">
+      <button data-v="6">とても<br>ゆっくり</button><button data-v="10">ゆっくり</button><button data-v="16">ふつう</button>
+    </div>
+  </div>
+
+  <h4>音声ガイド</h4>
+  <div class="row"><span>次の方向を声で知らせる</span>
+    <div class="seg" id="voiceSeg"><button data-v="1">オン</button><button data-v="0">オフ</button></div>
+  </div>
+
+  <h4>測り方</h4>
+  <div class="guide">
+    <ol>
+      <li>測らない方の目を手で覆う</li>
+      <li>まっすぐ前の遠くの一点を見続ける（スマホは見ない）</li>
+      <li>スマホを腕を伸ばした距離で持ち、測る目の側へずらす。点が消えたらボタンを押し続ける</li>
+      <li>点がゆっくり外へ動く。見えた瞬間に指を離す</li>
+      <li>点が盲点の真ん中に戻る。声に合わせて上・下・斜め…と8か所くり返す</li>
+    </ol>
+    <p style="margin-top:8px;">左右で<b>同じ距離</b>にする。距離が変わると盲点の大きさが変わります。画面の端まで点が来てしまうときは、スマホを少し近づけて両目とも測り直す。</p>
+  </div>
+
+  <h4>記録</h4>
+  <button class="danger" id="clearHist">記録をすべて消す</button>
+
+  <h4>ホーム画面に追加すると使いやすい</h4>
+  <div class="guide"><ol><li>共有ボタン（□から↑）を押す</li><li>「ホーム画面に追加」を選ぶ</li></ol></div>
+
+  <div class="learn">
+    <a href="https://bodydiscovery.info/owned-optin" target="_blank" rel="noopener">もっと学びたい人へ → https://bodydiscovery.info/owned-optin</a>
+    <span class="side-copy">© Functional Neuro Training / Legrandchariot</span>
+  </div>
+</nav>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+
+/* =========================================================
+   設定・状態（iOS のメモリ対策で window に載せる）
+   ========================================================= */
+const LS = { hist:'moten-map-history', speed:'moten-map-speed', voice:'moten-map-voice' };
+window.settings = {
+  speed: Number(localStorage.getItem(LS.speed) || 10),   // px/秒（かなりゆっくりめ）
+  voice: localStorage.getItem(LS.voice) !== '0'
+};
+
+/* 8方向。ox は「外（耳側）」が＋、oy は下が＋。右目なら外＝右、左目なら外＝左に反転して使う。
+   1つ目（外）だけ画面の開始点から動かし、残り7つは盲点の真ん中（開始点と1つ目の中間）から動かす。 */
+const R2 = Math.SQRT1_2;
+const DIRS = [
+  { key:'out',     ox: 1,   oy: 0,   name:'外',   say:'外へ' },
+  { key:'up',      ox: 0,   oy:-1,   name:'上',   say:'上へ' },
+  { key:'down',    ox: 0,   oy: 1,   name:'下',   say:'下へ' },
+  { key:'outUp',   ox: R2,  oy:-R2,  name:'外の斜め上', say:'外の、ななめ上へ' },
+  { key:'outDown', ox: R2,  oy: R2,  name:'外の斜め下', say:'外の、ななめ下へ' },
+  { key:'inUp',    ox:-R2,  oy:-R2,  name:'内の斜め上', say:'鼻側の、ななめ上へ' },
+  { key:'inDown',  ox:-R2,  oy: R2,  name:'内の斜め下', say:'鼻側の、ななめ下へ' },
+  { key:'in',      ox:-1,   oy: 0,   name:'内',   say:'鼻側へ' }
+];
+const EYE = { R:{ label:'右目', en:'RIGHT EYE', cover:'左目', side:'右', cortex:'左', outSign: 1 },
+              L:{ label:'左目', en:'LEFT EYE',  cover:'右目', side:'左', cortex:'右', outSign:-1 } };
+
+window.session = null;   // { date, R:{start,center,points[]}, L:{...} }
+window.run = null;       // 測定中の状態
+
+/* =========================================================
+   音（効果音＋音声ガイド）。失敗しても測定は続ける
+   ========================================================= */
+let actx = null;
+function unlockAudio(){
+  try{
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if(actx.state === 'suspended') actx.resume();
+    const b = actx.createBuffer(1, 1, 22050), s = actx.createBufferSource();
+    s.buffer = b; s.connect(actx.destination); s.start(0);
+  }catch(e){ actx = null; }
+}
+function beep(freq=880, ms=90){
+  try{
+    if(!actx) return;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.frequency.value = freq; g.gain.value = 0.15;
+    o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + ms/1000);
+  }catch(e){}
+}
+function say(text){
+  if(!window.settings.voice || !('speechSynthesis' in window)) return;
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ja-JP'; u.rate = 1.0;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+/* 画面を消さない */
+let wakeLock = null;
+async function keepAwake(on){
+  try{
+    if(on && 'wakeLock' in navigator){ wakeLock = await navigator.wakeLock.request('screen'); }
+    else if(!on && wakeLock){ await wakeLock.release(); wakeLock = null; }
+  }catch(e){}
+}
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && window.run) keepAwake(true);
+});
+
+/* =========================================================
+   画面切り替え
+   ========================================================= */
+function show(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+  window.scrollTo(0, 0);
+}
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(window.toastTimer);
+  window.toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+$('tapstart').addEventListener('click', () => {
+  unlockAudio();
+  $('splash').classList.add('hide');
+  renderHistory();
+});
+
+/* =========================================================
+   準備画面
+   ========================================================= */
+function openPrep(eye){
+  const e = EYE[eye];
+  window.prepEye = eye;
+  $('prepLabel').textContent = e.en;
+  $('prepTitle').textContent = e.label + 'の盲点を測る';
+  const items = [
+    `<b>${e.cover}を手で覆う。</b>${e.label}だけで見ます`,
+    `<b>まっすぐ前の遠くの一点</b>（壁の印など）を見続ける。測っている間、スマホの画面は見ません`,
+    `スマホを<b>腕を伸ばした距離</b>で、目の高さに持つ。${eye === 'L' ? '<b>右目と同じ距離</b>にします' : 'この距離を覚えておき、左目も同じにします'}`,
+    `画面の点を目の端で感じながら、スマホを<b>${e.side}へ</b>ゆっくりずらす。<b>点が消えたら止めて、下のボタンを押し続ける</b>`,
+    `点がゆっくり${e.side}へ動く。<b>見えた瞬間に指を離す。</b>点が盲点の真ん中に戻るので、声の合図で上・下・斜め…と<b>8か所</b>くり返します`
+  ];
+  $('prepList').innerHTML = items.map((t, i) => `<li><span class="no">${i+1}</span><span>${t}</span></li>`).join('');
+  $('skipEye').style.display = eye === 'L' ? 'block' : 'none';
+  show('s-prep');
+}
+$('goPrepR').addEventListener('click', () => { window.session = { date: Date.now(), R:null, L:null }; openPrep('R'); });
+$('skipEye').addEventListener('click', () => finishSession());
+$('startMeas').addEventListener('click', () => startMeasure(window.prepEye));
+
+/* =========================================================
+   測定
+   ========================================================= */
+const dotEl = $('dot'), holdEl = $('hold');
+const EDGE = 10;                 // 画面の端の余白（px）
+const MIN_MOVE = 3;              // これより動いていなければ押し間違いとして記録しない
+
+function area(){                 // 点が動ける範囲（ボタンの上まで）
+  const W = window.innerWidth, H = window.innerHeight;
+  const bottom = holdEl.getBoundingClientRect().top - 14;
+  return { W, top: 70, bottom: Math.max(200, bottom), H };
+}
+
+function startMeasure(eye){
+  document.body.classList.add('measuring');
+  $('meas').classList.add('on');      // 先に出す（隠れたままだとボタンの位置が測れない）
+  const a = area();
+  const sign = EYE[eye].outSign;
+  /* 開始点は真ん中より少し鼻側に置く。盲点は横に約5〜6度あり、画面の真ん中から外へ動かすと
+     腕の長さでは画面の端に届いてしまうことがあるため、外側に余白を残す */
+  const sx = a.W / 2 - sign * a.W * 0.14;
+  const sy = (a.top + a.bottom) / 2;
+  window.run = { eye, sign, start:{x:sx, y:sy}, center:null, points:[], idx:0, pos:{x:sx, y:sy},
+                 pressing:false, lastT:0, from:null, edge:false };
+  keepAwake(true);
+  placeDot(sx, sy);
+  updateMeasUI();
+  say(`${EYE[eye].cover}を覆って、遠くの一点を見続けます。スマホを${EYE[eye].side}へずらして、点が消えたら、ボタンを押し続けてください`);
+}
+
+function placeDot(x, y){ dotEl.style.left = x + 'px'; dotEl.style.top = y + 'px'; }
+
+function updateMeasUI(){
+  const r = window.run, d = DIRS[r.idx];
+  const e = EYE[r.eye];
+  $('mStatus').textContent = `${e.label}　${r.idx + 1} / 8　${d.name}`;
+  if(r.pressing){
+    holdEl.innerHTML = `見えたら はなす<small>点が${dirWord(d, r.sign)}へ動いています</small>`;
+  }else if(r.idx === 0){
+    holdEl.innerHTML = `点が消えたら 押しつづける<small>スマホを${e.side}へずらして点を消す</small>`;
+  }else{
+    holdEl.innerHTML = `押しつづける → ${dirWord(d, r.sign)}<small>見えたら はなす</small>`;
+  }
+  $('mUndo').style.visibility = r.idx > 0 ? 'visible' : 'hidden';
+}
+/* 画面上の向き（右・左・上…）で言う。外/内は目によって左右が入れかわる */
+function dirWord(d, sign){
+  const sx = d.ox * sign;
+  const h = sx > 0.1 ? '右' : (sx < -0.1 ? '左' : '');
+  const v = d.oy < -0.1 ? '上' : (d.oy > 0.1 ? '下' : '');
+  if(h && v) return h + v;
+  return h || v;
+}
+
+function origin(){ const r = window.run; return r.idx === 0 ? r.start : r.center; }
+
+function pressStart(ev){
+  ev.preventDefault();
+  const r = window.run; if(!r || r.pressing) return;
+  unlockAudio();
+  try{ holdEl.setPointerCapture(ev.pointerId); }catch(e){}
+  const o = origin();
+  r.from = { x:o.x, y:o.y };
+  r.pos = { x:o.x, y:o.y };
+  r.edge = false;
+  r.pressing = true; r.pid = ev.pointerId; r.lastT = performance.now();
+  holdEl.classList.add('pressing');
+  placeDot(o.x, o.y);
+  updateMeasUI();
+  requestAnimationFrame(tick);
+}
+
+function tick(t){
+  const r = window.run; if(!r || !r.pressing) return;
+  const dt = Math.min(0.1, (t - r.lastT) / 1000); r.lastT = t;
+  const d = DIRS[r.idx];
+  const step = window.settings.speed * dt;
+  let nx = r.pos.x + d.ox * r.sign * step;
+  let ny = r.pos.y + d.oy * step;
+  const a = area();
+  if(nx < EDGE || nx > a.W - EDGE || ny < a.top || ny > a.bottom){
+    // 端に着いたらその場で止める（斜めのとき端に沿って滑らせない）
+    if(!r.edge){ r.edge = true; beep(330, 160); say('画面の端です。指を離してください'); }
+    return;
+  }
+  r.pos = { x:nx, y:ny };
+  placeDot(nx, ny);
+  requestAnimationFrame(tick);
+}
+
+function pressEnd(ev){
+  const r = window.run; if(!r || !r.pressing || ev.pointerId !== r.pid) return;
+  r.pressing = false;
+  holdEl.classList.remove('pressing');
+  if(ev.type === 'pointercancel'){    // 着信・画面の割り込みなど＝「見えた」ではないので記録しない
+    const o = origin(); placeDot(o.x, o.y); updateMeasUI(); say('取り消しました。もう一度押してください'); return;
+  }
+  const moved = Math.hypot(r.pos.x - r.from.x, r.pos.y - r.from.y);
+  if(moved < MIN_MOVE){ updateMeasUI(); return; }   // 押し間違い
+  const p = { x:r.pos.x, y:r.pos.y, edge:r.edge, dir:DIRS[r.idx].key };
+  r.points.push(p);
+  if(r.idx === 0){
+    // 開始点（消えた所）と、外で見えた所のちょうど中間＝盲点の中から残りを測る
+    r.center = { x:(r.start.x + p.x) / 2, y:r.start.y };
+  }
+  beep(880, 90);
+  if(navigator.vibrate) navigator.vibrate(30);
+  r.idx++;
+  if(r.idx >= DIRS.length){ endEye(); return; }
+  placeDot(r.center.x, r.center.y);
+  updateMeasUI();
+  say(`${r.idx + 1}か所め。次は${DIRS[r.idx].say}`);
+}
+
+holdEl.addEventListener('pointerdown', pressStart);
+holdEl.addEventListener('pointerup', pressEnd);
+holdEl.addEventListener('pointercancel', pressEnd);
+holdEl.addEventListener('contextmenu', e => e.preventDefault());
+
+$('mUndo').addEventListener('click', () => {
+  const r = window.run; if(!r || r.pressing || r.idx === 0) return;
+  r.points.pop(); r.idx--;
+  if(r.idx === 0){ r.center = null; placeDot(r.start.x, r.start.y); }
+  else placeDot(r.center.x, r.center.y);
+  updateMeasUI();
+  say(`1つ戻しました。${DIRS[r.idx].say}をやり直します`);
+});
+$('mQuit').addEventListener('click', () => {
+  closeMeas();
+  window.run = null;
+  toast('測定をやめました');
+  show('s-home'); renderHistory();
+});
+
+function maybeReload(){ if(window.pendingReload && !window.run && !window.session) window.location.reload(); }
+function closeMeas(){
+  $('meas').classList.remove('on');
+  document.body.classList.remove('measuring');
+  keepAwake(false);
+  if('speechSynthesis' in window) speechSynthesis.cancel();
+}
+
+function endEye(){
+  const r = window.run;
+  // 盲点の真ん中を原点に、「外＝＋x」にそろえて保存（左目も右目と同じ向きで比べられる）
+  const pts = r.points.map(p => ({ x:(p.x - r.center.x) * r.sign, y:p.y - r.center.y, edge:p.edge, dir:p.dir }));
+  window.session[r.eye] = { pts, W: window.innerWidth, H: window.innerHeight };
+  closeMeas();
+  window.run = null;
+  beep(660, 120); setTimeout(() => beep(990, 140), 150);
+  if(r.eye === 'R'){
+    say('右目が終わりました。次は左目です');
+    openPrep('L');
+  }else{
+    say('左目も終わりました');
+    finishSession();
+  }
+}
+
+function finishSession(){
+  const s = window.session;
+  if(!s || (!s.R && !s.L)){ show('s-home'); return; }
+  const hist = loadHist();
+  hist.unshift(s);
+  localStorage.setItem(LS.hist, JSON.stringify(hist.slice(0, 30)));
+  renderResult(s, hist[1] || null);
+}
+
+/* =========================================================
+   計算：面積・幅・高さ・上下の割合
+   ========================================================= */
+function ordered(pts){   // 角度の順に並べて輪にする
+  return pts.slice().sort((a, b) => Math.atan2(a.y, a.x) - Math.atan2(b.y, b.x));
+}
+function polyArea(poly){
+  let s = 0;
+  for(let i = 0; i < poly.length; i++){ const a = poly[i], b = poly[(i+1) % poly.length]; s += a.x * b.y - b.x * a.y; }
+  return Math.abs(s) / 2;
+}
+/* 横線 y=yc で多角形を切り、上側（y<yc）を残す */
+function clipAbove(poly, yc){
+  const out = [];
+  for(let i = 0; i < poly.length; i++){
+    const a = poly[i], b = poly[(i+1) % poly.length];
+    const ain = a.y <= yc, bin = b.y <= yc;
+    if(ain) out.push(a);
+    if(ain !== bin){ const t = (yc - a.y) / (b.y - a.y); out.push({ x:a.x + t * (b.x - a.x), y:yc }); }
+  }
+  return out;
+}
+function stats(eyeData){
+  if(!eyeData) return null;
+  const poly = ordered(eyeData.pts);
+  const xs = poly.map(p => p.x), ys = poly.map(p => p.y);
+  const top = Math.min(...ys), bottom = Math.max(...ys);
+  const mid = (top + bottom) / 2;   // 盲点自身の上端と下端の真ん中で上下に分ける（スマホの高さのずれに左右されない）
+  const A = polyArea(poly);
+  const up = polyArea(clipAbove(poly, mid));
+  return { poly, A, w: Math.max(...xs) - Math.min(...xs), h: bottom - top, upShare: A ? up / A : 0.5,
+           edge: eyeData.pts.some(p => p.edge) };
+}
+
+/* =========================================================
+   結果の描画
+   ========================================================= */
+function svgPoly(poly, eye, mirror, color, dashed){
+  const pts = poly.map(p => `${(mirror ? -p.x : p.x).toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  return `<polygon points="${pts}" fill="${dashed ? 'none' : color}" fill-opacity="${dashed ? 0 : .28}" stroke="${color}"
+    stroke-width="${dashed ? 2 : 2.5}" ${dashed ? 'stroke-dasharray="5 4" stroke-opacity=".7"' : ''} vector-effect="non-scaling-stroke"/>` +
+    (dashed ? '' : poly.map(p => `<circle cx="${(mirror ? -p.x : p.x).toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="${p.edge ? '#d33' : color}"/>`).join(''));
+}
+function scaleOf(list){
+  let m = 40;
+  list.forEach(st => st && st.poly.forEach(p => { m = Math.max(m, Math.abs(p.x), Math.abs(p.y)); }));
+  return m * 1.15;
+}
+function mapSVG(st, prevSt, eye, half){
+  const color = eye === 'R' ? 'var(--eyeR)' : 'var(--eyeL)';
+  const mirror = eye === 'L';     // 画面に出すときは左目を元の向き（外＝左）に戻す
+  const v = `${-half} ${-half} ${half*2} ${half*2}`;
+  let body = `<line x1="${-half}" y1="0" x2="${half}" y2="0" stroke="#c8d0d2" stroke-width="1" vector-effect="non-scaling-stroke"/>
+    <line x1="0" y1="${-half}" x2="0" y2="${half}" stroke="#c8d0d2" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+  if(prevSt) body += svgPoly(prevSt.poly, eye, mirror, '#7a8a8e', true);
+  if(st) body += svgPoly(st.poly, eye, mirror, color, false);
+  else body += `<text x="0" y="6" text-anchor="middle" font-size="${half/6}" fill="#7a8a8e">未測定</text>`;
+  return `<svg viewBox="${v}" role="img" aria-label="${EYE[eye].label}の盲点の形">${body}</svg>`;
+}
+
+function pct(a, b){ return Math.round((a / b - 1) * 100); }
+
+function renderResult(s, prev){
+  const R = stats(s.R), L = stats(s.L);
+  const pR = prev ? stats(prev.R) : null, pL = prev ? stats(prev.L) : null;
+  const half = scaleOf([R, L, pR, pL]);
+  const d = new Date(s.date);
+  $('resDate').textContent = `RESULT ・ ${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+
+  // 左目を左、右目を右に置く（相手と向き合ったときではなく、本人から見た向き）
+  $('maps').innerHTML =
+    `<div class="mapBox"><div class="cap"><span class="eyeTag L">左目</span> ＝右の皮質</div>${mapSVG(L, pL, 'L', half)}</div>` +
+    `<div class="mapBox"><div class="cap"><span class="eyeTag R">右目</span> ＝左の皮質</div>${mapSVG(R, pR, 'R', half)}</div>`;
+
+  // 重ねて形を比べる（どちらも「外＝右」にそろえる）
+  if(R && L){
+    const v = `${-half} ${-half} ${half*2} ${half*2}`;
+    $('overlayBox').style.display = 'block';
+    $('overlayBox').innerHTML = `<div class="cap">重ねて比べる（左目を裏返して、外側を右にそろえた形）</div>
+      <svg viewBox="${v}" style="max-width:260px;margin:0 auto;">
+        <line x1="${-half}" y1="0" x2="${half}" y2="0" stroke="#c8d0d2" vector-effect="non-scaling-stroke"/>
+        <line x1="0" y1="${-half}" x2="0" y2="${half}" stroke="#c8d0d2" vector-effect="non-scaling-stroke"/>
+        ${svgPoly(L.poly, 'L', false, 'var(--eyeL)', false)}${svgPoly(R.poly, 'R', false, 'var(--eyeR)', false)}
+      </svg>`;
+  }else{ $('overlayBox').style.display = 'none'; }
+
+  // 数字の表
+  const cell = (st, f) => st ? f(st) : '—';
+  const upLow = st => `上${Math.round(st.upShare*100)}：下${100-Math.round(st.upShare*100)}`;
+  let rows = `<tr><th></th><th><span class="eyeTag L">左目</span></th><th><span class="eyeTag R">右目</span></th></tr>
+    <tr><td>大きさ（面積）</td><td>${cell(L, x => Math.round(x.A).toLocaleString())}</td><td>${cell(R, x => Math.round(x.A).toLocaleString())}</td></tr>
+    <tr><td>幅 × 高さ</td><td>${cell(L, x => `${Math.round(x.w)}×${Math.round(x.h)}`)}</td><td>${cell(R, x => `${Math.round(x.w)}×${Math.round(x.h)}`)}</td></tr>
+    <tr><td>上下の割合</td><td>${cell(L, upLow)}</td><td>${cell(R, upLow)}</td></tr>`;
+  if(pR || pL){
+    const ch = (st, ps) => (st && ps) ? `${pct(st.A, ps.A) > 0 ? '+' : ''}${pct(st.A, ps.A)}%` : '—';
+    rows += `<tr><td>前回より（面積）</td><td>${ch(L, pL)}</td><td>${ch(R, pR)}</td></tr>`;
+  }
+  $('numTable').innerHTML = rows;
+
+  $('reading').innerHTML = readingHTML(R, L, pR, pL);
+  $('nextSteps').innerHTML = nextHTML(R, L);
+  show('s-result');
+}
+
+/* 区切りの目安（アプリの表示上の区切り。正常値ではない）：面積の差10%未満＝ほぼ同じ／上下は55:45を超えたら「大きい」 */
+const SIZE_TIE = 0.10, SHAPE_TIE = 0.55;
+
+function shapeOf(st){
+  if(st.upShare > SHAPE_TIE) return 'up';
+  if(st.upShare < 1 - SHAPE_TIE) return 'down';
+  return 'even';
+}
+
+function readingHTML(R, L, pR, pL){
+  const out = [];
+  if(R && L){
+    const big = R.A >= L.A ? 'R' : 'L', small = big === 'R' ? 'L' : 'R';
+    const ratio = Math.max(R.A, L.A) / Math.min(R.A, L.A) - 1;
+    if(ratio < SIZE_TIE){
+      out.push(`<p><b>大きさ：左右ほぼ同じ</b>（差${Math.round(ratio*100)}%）。左右差が見つからないことはよくあります。そのときは他のアセスメントに進み、目立つ問題がないかを探します。</p>`);
+    }else{
+      out.push(`<p><b>大きさ：${EYE[big].label}の盲点が${Math.round(ratio*100)}%大きい</b> → ${EYE[big].label}の盲点は<b>${EYE[big].cortex}の皮質</b>を映すので、${EYE[big].cortex}の皮質が盲点を周りの情報で埋め合わせきれていないかもしれません（盲点は小さい方がいい）。</p>`);
+    }
+  }else{
+    out.push(`<p>片目だけの測定です。<b>左右を比べる</b>のがこのアセスメントの基本なので、もう片方も同じ距離で測りましょう。</p>`);
+  }
+  [['R', R], ['L', L]].forEach(([eye, st]) => {
+    if(!st) return;
+    const e = EYE[eye], sh = shapeOf(st);
+    if(sh === 'down') out.push(`<p><b>${e.label}の形：下が大きい（涙のような形）</b> → 下側の視野は頭頂葉を経由するので、<b>${e.cortex}の頭頂葉</b>が疑わしい。</p>`);
+    else if(sh === 'up') out.push(`<p><b>${e.label}の形：上が大きい</b> → 上側の視野は側頭葉を経由するので、<b>${e.cortex}の側頭葉</b>が疑わしい。</p>`);
+    else out.push(`<p><b>${e.label}の形：上下ほぼ同じ</b>（少し縦長の円になるのが基本）。</p>`);
+  });
+  if(pR || pL){
+    const parts = [];
+    if(R && pR) parts.push(`右目 ${pct(R.A, pR.A) > 0 ? '+' : ''}${pct(R.A, pR.A)}%`);
+    if(L && pL) parts.push(`左目 ${pct(L.A, pL.A) > 0 ? '+' : ''}${pct(L.A, pL.A)}%`);
+    if(parts.length) out.push(`<p><b>前回との比較（面積）：</b>${parts.join('／')}。点線が前回の形です。ドリルの前後で小さくなれば、脳に変化が起きた手がかりになります。</p>`);
+  }
+  if((R && R.edge) || (L && L.edge)){
+    out.push(`<p style="color:var(--danger);">赤い点は画面の端で止まった所です（本当の盲点の端はもっと外）。スマホを少し近づけて、<b>両目とも同じ距離で</b>測り直してください。</p>`);
+  }
+  out.push(`<p class="note">⚠ あくまでスクリーニング。ここですべてが分かるのではなく、「疑わしい」と当たりをつけて次のアセスメントに進むためのものです。一点を見続けられなかったときは、結果を過信せず注視のドリルを先に。<br>区切り（面積の差10%・上下55:45）はアプリの表示上の目安で、正常値ではありません。</p>`);
+  return out.join('');
+}
+
+function nextHTML(R, L){
+  const out = [];
+  [['R', R], ['L', L]].forEach(([eye, st]) => {
+    if(!st) return;
+    const e = EYE[eye], sh = shapeOf(st);
+    if(sh === 'down'){
+      out.push(`<p><b>${e.label}の下が大きい（${e.cortex}の頭頂葉）</b><br>
+        ・頭頂葉は体性感覚の通り道。${e.cortex}側に怪我・手術痕・感覚が薄い場所がないかを調べる → 体性感覚のスクリーニングへ<br>
+        ・その側の感覚刺激を増やす<br>
+        ・スムーズパースート（盲点の下側が大きい側へ向けて）／オプトキネティックドラム<br>
+        ・サッカード（目をジャンプさせる先を決めているのが頭頂葉）／光の刺激</p>`);
+    }else if(sh === 'up'){
+      out.push(`<p><b>${e.label}の上が大きい（${e.cortex}の側頭葉）</b><br>
+        ・聴覚のスクリーニング：耳の横で音を鳴らし、どちらの聞こえがいいかを見る（${e.cortex === '左' ? '右' : '左'}側の音は主に${e.cortex}の皮質へ）<br>
+        ・聞こえが悪ければ、音の刺激やトノトピックマッピングでトレーニング<br>
+        ・匂いは<b>同じ側</b>の皮質へ行く。${e.cortex}側の匂いを刺激して、もう一度盲点を測る</p>`);
+    }
+  });
+  if(!out.length) out.push(`<p>形に目立つ偏りはありません。大きさに左右差があれば、その側の皮質を刺激するドリルを行い、<b>もう一度測って</b>変化を見ます。</p>`);
+  out.push(`<p class="note">どの打ち手も「かもしれない」の見立てです。やったあとにもう一度測り、盲点が小さくなったか・形が変わったかで確かめます。</p>`);
+  return out.join('');
+}
+
+$('again').addEventListener('click', () => { window.session = { date: Date.now(), R:null, L:null }; openPrep('R'); });
+$('toHome').addEventListener('click', () => { window.session = null; maybeReload(); show('s-home'); renderHistory(); });
+
+/* =========================================================
+   記録
+   ========================================================= */
+function loadHist(){ try{ return JSON.parse(localStorage.getItem(LS.hist) || '[]'); }catch(e){ return []; } }
+function renderHistory(){
+  const hist = loadHist();
+  $('histWrap').style.display = hist.length ? 'block' : 'none';
+  $('hist').innerHTML = hist.slice(0, 10).map((s, i) => {
+    const d = new Date(s.date);
+    const eyes = [s.R ? '右目' : '', s.L ? '左目' : ''].filter(Boolean).join('・');
+    return `<button data-i="${i}">${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}<small>${eyes}</small></button>`;
+  }).join('');
+}
+$('hist').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button'); if(!b) return;
+  const hist = loadHist(), i = Number(b.dataset.i);
+  renderResult(hist[i], hist[i+1] || null);
+});
+$('clearHist').addEventListener('click', () => {
+  localStorage.removeItem(LS.hist); renderHistory(); toast('記録を消しました');
+});
+
+/* =========================================================
+   サイドメニュー
+   ========================================================= */
+function openMenu(on){
+  $('side').classList.toggle('open', on); $('overlay').classList.toggle('show', on);
+  $('side').setAttribute('aria-hidden', on ? 'false' : 'true');
+  if(on) $('closeMenu').focus();
+}
+$('menuBtn').addEventListener('click', () => openMenu(true));
+$('closeMenu').addEventListener('click', () => openMenu(false));
+$('overlay').addEventListener('click', () => openMenu(false));
+document.addEventListener('keydown', e => { if(e.key === 'Escape') openMenu(false); });
+
+function syncSeg(segId, val){
+  document.querySelectorAll(`#${segId} button`).forEach(b => b.classList.toggle('on', b.dataset.v === String(val)));
+}
+$('speedSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  window.settings.speed = Number(b.dataset.v); localStorage.setItem(LS.speed, b.dataset.v); syncSeg('speedSeg', b.dataset.v);
+});
+$('voiceSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  window.settings.voice = b.dataset.v === '1'; localStorage.setItem(LS.voice, b.dataset.v); syncSeg('voiceSeg', b.dataset.v);
+});
+syncSeg('speedSeg', window.settings.speed);
+syncSeg('voiceSeg', window.settings.voice ? 1 : 0);
+renderHistory();
+
+/* =========================================================
+   Service Worker 登録 ＋ controllerchange で自動リロード
+   ========================================================= */
+if('serviceWorker' in navigator){
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if(refreshing) return; refreshing = true;
+    if(window.run){ window.pendingReload = true; return; }   // 測定中は再読み込みしない（途中の点が消えるため）
+    window.location.reload();
+  });
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('[SW] register failed', err));
+  });
+}
+</script>
+</body>
+</html>

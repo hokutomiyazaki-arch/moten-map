@@ -1,0 +1,19 @@
+{
+  "name": "盲点マップ ─ 盲点の大きさと形を左右で比べる",
+  "short_name": "盲点マップ",
+  "description": "スマホ1台で右目と左目の盲点を8方向から測り、大きさと形を左右で比べるスクリーニング。Functional Neuro TrainingのLite PWA。",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1a20",
+  "theme_color": "#0b1a20",
+  "scope": "./",
+  "lang": "ja",
+  "dir": "ltr",
+  "categories": ["health", "fitness"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
